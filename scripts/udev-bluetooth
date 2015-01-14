@@ -1,0 +1,46 @@
+#!/bin/bash
+#change if you don't use default analog audio out.
+#THIS DIDN'T WORK FOR MY PI SO I ADDED A amixer COMMAND BELOW
+AUDIOSINK="alsa_output.platform-bcm2835_AUD0.0.analog-stereo"
+echo "Executing bluetooth script...|$ACTION|" >> /var/log/bluetooth_dev
+
+ACTION=$(expr "$ACTION" : "\([a-zA-Z]\+\).*")
+if [ "$ACTION" = "add" ]
+then
+
+# Turn off BT discover mode before connecting existing BT device to audio
+hciconfig hci0 noscan
+
+# set the audio output to the analog
+# COMMENT THIS LINE OUT IF YOU WANT TO OUTPUT AUDIO THROUGH HDMI
+amixer cset numid=3 1
+
+# Set volume level to 100 percent
+amixer set Master 100%
+pacmd set-sink-volume 0 65537
+
+   for dev in $(find /sys/devices/virtual/input/ -name input*)
+   do
+      if [ -f "$dev/name" ]
+      then
+         mac=$(cat "$dev/name" | sed 's/:/_/g')
+         bluez_dev=bluez_source.$mac
+
+         sleep 1
+
+         CONFIRM=`sudo -u pi pactl list short | grep $bluez_dev`
+         if [ ! -z "$CONFIRM" ]
+         then
+            echo "Setting bluez_source to:  $bluez_dev" >> /var/log/bluetooth_dev
+            echo pactl load-module module-loopback source=$bluez_dev sink=$AUDIOSINK rate=44100 adjust_time=0 >> /var/log/bluetooth_dev
+            sudo -u pi pactl load-module module-loopback source=$bluez_dev sink=$AUDIOSINK rate=44100 adjust_time=0 >> /var/log/bluetooth_dev
+         fi
+      fi
+   done
+fi
+
+if [ "$ACTION" = "remove" ]
+then
+# Turn on bluetooth discovery if device disconnects
+sudo hciconfig hci0 piscan
+fi

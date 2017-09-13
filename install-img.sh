@@ -2,6 +2,11 @@
 
 # http://elinux.org/RPi_Easy_SD_Card_Setup#Flashing_the_SD_card_using_Mac_OSX
 
+if [[ -z "$1" ]]; then
+    echo "missing image file";
+    exit 1
+fi
+
 diskutil list
 
 
